@@ -1,15 +1,16 @@
 fastapi
 uvicorn[standard]
 websockets
+requests
 python-multipart
 sqlalchemy
 alembic
 psycopg[binary,pool]
-faster-whisper
+# faster-whisper
 pydantic
 pydantic-settings
 python-dotenv
-numpy
+# numpy
 pytest
 pytest-asyncio
 httpx

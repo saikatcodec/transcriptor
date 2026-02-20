@@ -29,7 +29,7 @@ export default function HomePage() {
           <p className="font-body text-muted text-base max-w-md leading-relaxed">
             Speak into your microphone. Your words are streamed and transcribed
             in real time using a locally-hosted speech recognition model — no
-            cloud, no data leaves your machine.
+            cloud.
           </p>
         </div>
 
