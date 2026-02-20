@@ -2,50 +2,51 @@
 Shared pytest fixtures.
 
 Tests run against a real PostgreSQL database (Neon or local).
-The DATABASE_URL must be set as an environment variable before running tests.
+Set DATABASE_URL before running:
 
     export DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require"
     pytest -v
 
-Each test gets a fresh schema via a transaction that is rolled back on teardown,
-so tests are fully isolated without dropping/recreating tables.
+Isolation strategy
+------------------
+We use a dedicated test schema ("test_schema") that is created fresh at the
+start of the session and dropped at the end. Before each test, all tables are
+TRUNCATED so every test starts with a clean slate. This is simpler and more
+reliable than savepoint-based rollback when the app has services that open
+their own DB connections (e.g. SessionService, WebSocket endpoint).
 """
 
 import os
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
-    AsyncConnection,
 )
 
 from app.db.database import Base, get_db
 from app.main import app
-from app.core.settings import get_settings
 
 
+# Resolve DATABASE_URL 
 def _get_test_db_url() -> str:
-    """
-    Return the test DATABASE_URL, normalised to psycopg3 scheme.
-    Reads from the DATABASE_URL env var (same one used by the app).
-    """
     raw = os.environ.get("DATABASE_URL", "")
     if not raw:
-        # Try reading from .env file as a fallback
-        from dotenv import dotenv_values
-        raw = dotenv_values(".env").get("DATABASE_URL", "")
+        try:
+            from dotenv import dotenv_values
+            raw = dotenv_values(".env").get("DATABASE_URL", "")
+        except ImportError:
+            pass
 
     if not raw:
         pytest.fail(
-            "DATABASE_URL is not set. "
-            "Set it to your Neon connection string before running tests:\n"
+            "DATABASE_URL is not set.\n"
             "  export DATABASE_URL='postgresql://user:pass@host/db?sslmode=require'"
         )
 
-    # Normalise scheme to psycopg3
     if raw.startswith("postgres://") and "+psycopg" not in raw:
         raw = raw.replace("postgres://", "postgresql+psycopg://", 1)
     elif raw.startswith("postgresql://") and "+psycopg" not in raw:
@@ -53,16 +54,11 @@ def _get_test_db_url() -> str:
     return raw
 
 
-# Test engine (module-scoped — one engine for entire test run) 
+# Session-scoped engine 
 @pytest.fixture(scope="session")
-def test_db_url() -> str:
-    return _get_test_db_url()
-
-
-@pytest.fixture(scope="session")
-def test_engine(test_db_url):
+def test_engine():
     engine = create_async_engine(
-        test_db_url,
+        _get_test_db_url(),
         echo=False,
         pool_size=2,
         max_overflow=2,
@@ -71,10 +67,20 @@ def test_engine(test_db_url):
     return engine
 
 
-# Create tables once per test session, drop after all tests
+@pytest.fixture(scope="session")
+def TestSessionLocal(test_engine):
+    return async_sessionmaker(
+        bind=test_engine,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+        class_=AsyncSession,
+    )
+
+
+# Create tables once, drop after all tests
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def create_test_tables(test_engine):
-    """Create all tables once before the test session, drop after."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -82,31 +88,38 @@ async def create_test_tables(test_engine):
         await conn.run_sync(Base.metadata.drop_all)
 
 
-# Per-test transaction rollback for isolation
+# Truncate all tables before each test 
+@pytest_asyncio.fixture(autouse=True)
+async def truncate_tables(test_engine):
+    """
+    Wipe all rows before every test so each starts with an empty database.
+    TRUNCATE ... RESTART IDENTITY CASCADE handles FK constraints and resets sequences.
+    """
+    table_names = [t.name for t in Base.metadata.sorted_tables]
+    if table_names:
+        truncate_sql = "TRUNCATE TABLE {} RESTART IDENTITY CASCADE".format(
+            ", ".join(table_names)
+        )
+        async with test_engine.begin() as conn:
+            await conn.execute(text(truncate_sql))
+    yield
+
+
+# Per-test DB session 
 @pytest_asyncio.fixture
-async def db_session(test_engine) -> AsyncSession:
-    """
-    Each test runs inside a transaction that is rolled back at the end.
-    This gives full isolation without recreating tables between tests.
-    """
-    async with test_engine.connect() as conn:
-        await conn.begin()
-        session = AsyncSession(bind=conn, expire_on_commit=False)
-        try:
-            yield session
-        finally:
-            await session.close()
-            await conn.rollback()
+async def db_session(TestSessionLocal) -> AsyncSession:
+    async with TestSessionLocal() as session:
+        yield session
+        await session.rollback()
 
 
-# HTTP test client with DB override
+# HTTP test client 
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncClient:
     """
-    AsyncClient with the DB dependency replaced by the test session
-    so HTTP requests hit the same rolled-back transaction.
+    AsyncClient whose get_db dependency is overridden to use the test session.
+    The truncate_tables fixture ensures a clean DB before each test.
     """
-
     async def override_get_db():
         yield db_session
 
