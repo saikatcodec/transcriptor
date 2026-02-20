@@ -1,0 +1,24 @@
+{
+    "cSpell.words": [
+        "asyncio",
+        "autoflush",
+        "autouse",
+        "datefmt",
+        "finalise",
+        "finalised",
+        "HEALTHCHECK",
+        "levelname",
+        "libpq",
+        "normalise",
+        "NOTSET",
+        "penalised",
+        "poolclass",
+        "psycopg",
+        "pytest",
+        "qualname",
+        "quantised",
+        "sessionmaker",
+        "sqlalchemy",
+        "testpaths"
+    ]
+}
