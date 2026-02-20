@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # App Factory 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="AlphaNet Real-Time Transcription API",
+        title="Real-Time Transcription API",
         description=(
             "WebSocket-based real-time speech-to-text using faster-whisper (CPU-only). "
             "Audio is streamed from the browser, transcribed incrementally, and persisted."

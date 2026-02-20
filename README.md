@@ -1,4 +1,4 @@
-# AlphaNet — Real-Time Transcription
+# Real-Time Transcription
 
 A full-stack, browser-based speech-to-text application. Audio captured in the browser is streamed over WebSockets to a FastAPI backend, transcribed in real time using a locally-hosted open-source AI model, and persisted to a Neon PostgreSQL database. No cloud AI services are used — all inference runs on CPU inside the container.
 

@@ -1,4 +1,4 @@
-# AlphaNet Transcription — Backend
+# Transcription — Backend
 
 > FastAPI + faster-whisper (CPU) + **Neon PostgreSQL** real-time speech-to-text backend.
 > Python **3.13** · psycopg3 · Docker-ready.
@@ -8,7 +8,7 @@
 ## Folder Structure
 
 ```
-transcription-backend/
+backend/
 ├── app/
 │   ├── main.py                        # App factory, lifespan, middleware
 │   ├── api/v1/
@@ -48,13 +48,13 @@ transcription-backend/
 2. Select your project → **Connection Details**
 3. Copy the **Connection string** — it looks like:
    ```
-   postgresql://alex:AbC123dEf@ep-cool-darkness-123456.us-east-2.aws.neon.tech/dbname?sslmode=require
+   postgresql://user:password@ep-xxxx-xxxxxx.us-east-2.aws.neon.tech/dbname?sslmode=require
    ```
 
 ### 2. Configure environment
 
 ```bash
-cd transcription-backend
+cd backend
 cp .env.example .env
 # Paste your Neon connection string as DATABASE_URL in .env
 ```
@@ -62,8 +62,8 @@ cp .env.example .env
 ### 3. Install and run
 
 ```bash
-python3.13 -m venv .venv
-source .venv/bin/activate
+conda create -p venv/ python=3.13 -y
+conda activate ./venv/
 
 pip install -r requirements.txt
 
@@ -89,16 +89,17 @@ pytest -v
 ```
 
 Expected output:
+
 ```
-tests/test_sessions.py::test_list_sessions_empty          PASSED
-tests/test_sessions.py::test_get_session_not_found        PASSED
-tests/test_sessions.py::test_create_and_retrieve_session  PASSED
-tests/test_sessions.py::test_list_sessions_returns_created PASSED
-tests/test_sessions.py::test_pcm_bytes_to_float32_silence PASSED
-tests/test_sessions.py::test_pcm_bytes_to_float32_max_positive PASSED
-tests/test_sessions.py::test_count_words                  PASSED
-tests/test_sessions.py::test_build_preview_short          PASSED
-tests/test_sessions.py::test_build_preview_truncates      PASSED
+tests/test_sessions.py::test_list_sessions_empty                PASSED
+tests/test_sessions.py::test_get_session_not_found              PASSED
+tests/test_sessions.py::test_create_and_retrieve_session        PASSED
+tests/test_sessions.py::test_list_sessions_returns_created      PASSED
+tests/test_sessions.py::test_pcm_bytes_to_float32_silence       PASSED
+tests/test_sessions.py::test_pcm_bytes_to_float32_max_positive  PASSED
+tests/test_sessions.py::test_count_words                        PASSED
+tests/test_sessions.py::test_build_preview_short                PASSED
+tests/test_sessions.py::test_build_preview_truncates            PASSED
 ```
 
 ---
@@ -122,12 +123,14 @@ so no system PostgreSQL client library is required in the image.
 ### WebSocket — `WS /ws/transcribe`
 
 **Client → Server:**
+
 ```json
 { "type": "audio_chunk", "audio": "<base64 Int16 PCM at 16kHz>" }
 { "type": "end_stream" }
 ```
 
 **Server → Client:**
+
 ```json
 { "type": "session_start", "session_id": "uuid" }
 { "type": "partial",       "text": "Hello world..." }

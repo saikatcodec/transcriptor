@@ -9,7 +9,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <Mic className="w-4 h-4 text-accent" />
           <span className="font-mono text-xs tracking-[0.3em] uppercase text-paper/70">
-            AlphaNet Transcribe
+            Transcribe
           </span>
         </div>
         <span className="font-mono text-xs text-muted tracking-widest">

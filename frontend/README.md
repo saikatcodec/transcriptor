@@ -1,4 +1,4 @@
-# AlphaNet Transcription — Frontend
+# Transcription — Frontend
 
 > Real-time browser-based speech-to-text transcription UI built with **Next.js 14**, **TypeScript**, and **Tailwind CSS**.
 
@@ -75,10 +75,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `NEXT_PUBLIC_WS_URL` | `ws://localhost:8000` | WebSocket endpoint for the backend |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | REST API base URL |
+| Variable              | Default                 | Description                        |
+| --------------------- | ----------------------- | ---------------------------------- |
+| `NEXT_PUBLIC_WS_URL`  | `ws://localhost:8000`   | WebSocket endpoint for the backend |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | REST API base URL                  |
 
 ---
 
@@ -88,9 +88,9 @@ Open [http://localhost:3000](http://localhost:3000).
 docker build \
   --build-arg NEXT_PUBLIC_WS_URL=ws://backend:8000 \
   --build-arg NEXT_PUBLIC_API_URL=http://backend:8000 \
-  -t alphanet-frontend .
+  -t transcribe-frontend .
 
-docker run -p 3000:3000 alphanet-frontend
+docker run -p 3000:3000 transcribe-frontend
 ```
 
 ---
